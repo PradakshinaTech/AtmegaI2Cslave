@@ -1,5 +1,5 @@
 #ifndef F_CPU
-#define F_CPU 16000000UL
+#define F_CPU 1000000UL
 #endif
 
 #include <avr/io.h>
@@ -11,7 +11,7 @@
 
 // buffer used to convert integer to string
 char buffer[3];
-
+/*
 void init_uart(uint16_t baudrate){
 
 	uint16_t UBRR_val = (F_CPU/16)/(baudrate-1);
@@ -35,20 +35,60 @@ void uart_puts(char *s){
 		s++;
 	}
 }
-
+*/
 int main(void){
 	
-	init_uart(57600);
+	//init_uart(57600);
+	int i;
 	I2C_init(0x32); // initalize as slave with address 0x32
-	
+	DDRD=0x0F;
+	DDRC=0x00;
+	PORTC|=0x0F;
+	PORTD=0x0F;
+	rxbuffer[0]=0x0F;
 	// allow interrupts
 	sei();
 	
 	while(1){
 		// convert receiver buffer index 0 to character array and send it via UART
-		itoa(rxbuffer[0], buffer, 10);
-		uart_puts(buffer);
-		_delay_ms(1000);
+	//	itoa(rxbuffer[0], buffer, 10);
+	//	uart_puts(buffer);
+	//	txbuffer[0]=0;
+//		txbuffer[1]=1;
+//		txbuffer[2]=2;
+//		txbuffer[3]=3;
+//		txbuffer[4]=4;
+//		PORTD=rxbuffer[0]&0x0F;
+//		PORTD=(PINC&0x0F);
+		for(i=0;i<dataloglevel;i++)
+		{
+			PORTD=0x00;
+			_delay_ms(100);
+			PORTD=0x01;
+			_delay_ms(100);
+			PORTD=0x00;
+			_delay_ms(100);
+			PORTD=datalog[i]&0x07;
+			_delay_ms(1000);
+			PORTD=0x00;
+			_delay_ms(100);
+			PORTD=0x02;
+			_delay_ms(100);
+			PORTD=0x00;
+			_delay_ms(100);
+			PORTD=(datalog[i]&0x38)>>3;
+			_delay_ms(1000);
+			PORTD=0x00;
+			_delay_ms(100);
+			PORTD=0x04;
+			_delay_ms(100);
+			PORTD=0x00;
+			_delay_ms(100);
+			PORTD=(datalog[i]&0xC0)>>6;
+			_delay_ms(1000);
+		}
+		_delay_ms(2000);
+
 	}
 	
 	return 0;
