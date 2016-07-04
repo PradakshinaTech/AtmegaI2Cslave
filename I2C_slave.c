@@ -4,7 +4,6 @@
 
 #include "I2C_slave.h"
 
-
 void I2C_init(uint8_t address){
 	// load address into TWI address register
 	TWAR = address;
@@ -21,20 +20,17 @@ ISR(TWI_vect){
 	
 	// temporary stores the received data
 	uint8_t data;
-//	PORTD=0x01;
+	
 	// own address has been acknowledged
-	datalog[dataloglevel++]=TWSR;
+	last_status=(TWSR&0xF8);
 	if( (TWSR & 0xF8) == TW_SR_SLA_ACK ){  
 		buffer_address = 0xFF;
-//		PORTD=0x02;
 		// clear TWI interrupt flag, prepare to receive next byte and acknowledge
 		TWCR |= (1<<TWIE) | (1<<TWINT) | (1<<TWEA) | (1<<TWEN); 
 	}
 	else if( (TWSR & 0xF8) == TW_SR_DATA_ACK ){ // data has been received in slave receiver mode
-//		datalog[dataloglevel++]=2;
 		
 		// save the received byte inside data 
-//		PORTD=0x04;
 		data = TWDR;
 		
 		// check wether an address has already been transmitted or not
@@ -64,12 +60,14 @@ ISR(TWI_vect){
 			}
 		}
 	}
+	else if( (TWSR & 0xF8) == TW_ST_SLA_ACK ){ // device has been addressed to be a transmitter
+		TWDR=txbuffer[buffer_address];
+		TWCR |= (1<<TWIE) | (1<<TWINT) | (1<<TWEA) | (1<<TWEN); 
+	}
 	else if( (TWSR & 0xF8) == TW_ST_DATA_ACK ){ // device has been addressed to be a transmitter
-//				datalog[dataloglevel++]=3;
-
+		
 		// copy data from TWDR to the temporary memory
 		data = TWDR;
-		PORTD=0x01;
 		
 		// if no buffer read address has been sent yet
 		if( buffer_address == 0xFF ){
@@ -92,25 +90,9 @@ ISR(TWI_vect){
 		}
 		
 	}
-	else if( (TWSR & 0xF8) == TW_SR_STOP ){ // device has been addressed to be a transmitter
-//		datalog[dataloglevel++]=4;
-		TWCR |= (1<<TWIE) | (1<<TWEA) | (1<<TWEN);
-	}
-	else if( (TWSR & 0xF8) == TW_ST_ARB_LOST_SLA_ACK ){ // device has been addressed to be a transmitter
-//		datalog[dataloglevel++]=5;
-		TWCR |= (1<<TWIE) | (1<<TWEA) | (1<<TWEN);
-	}
-	else if( (TWSR & 0xF8) == TW_ST_DATA_NACK ){ // device has been addressed to be a transmitter
-//		datalog[dataloglevel++]=6;
-		TWCR |= (1<<TWIE) | (1<<TWEA) | (1<<TWEN);
-	}
-	else if( (TWSR & 0xF8) == TW_ST_LAST_DATA ){ // device has been addressed to be a transmitter
-//		datalog[dataloglevel++]=7;
-		TWCR |= (1<<TWIE) | (1<<TWEA) | (1<<TWEN);
-	}
 	else{
-//		datalog[dataloglevel++]=0x20;
 		// if none of the above apply prepare TWI to be addressed again
 		TWCR |= (1<<TWIE) | (1<<TWEA) | (1<<TWEN);
 	} 
+
 }
